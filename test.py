@@ -33,14 +33,14 @@ def record_audio(seconds: int):
     print(f"File saved at {output_path}")
     return output_path
 
-record_audio(10)
+record_audio(5)
 
 
 
 model = whisper.load_model("base")
 
 # load audio and pad/trim it to fit 30 seconds
-audio = whisper.load_audio("test.wav")
+audio = whisper.load_audio("test.mp3")
 audio = whisper.pad_or_trim(audio)
 
 # make log-Mel spectrogram and move to the same device as the model
