@@ -8,7 +8,7 @@ import google.generativeai as genai
 import whisper
 
 
-_ = load_dotenv(find_dotenv()) # read local .env file
+_ = load_dotenv(find_dotenv())
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"),)
 
 def gemini_ai(text):
@@ -52,7 +52,7 @@ def linebot(request):
             os.remove(f'temp.m4a')
         else:
             reply = '你傳的不是文字呦～'
-        line_bot_api.reply_message(tk,TextSendMessage(reply))# 回傳訊息
+        line_bot_api.reply_message(tk,TextSendMessage(reply))
     except:
         print(request.args)                                   
     return 'OK'                                             
