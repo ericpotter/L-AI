@@ -12,6 +12,7 @@ from dotenv import load_dotenv, find_dotenv
 
 # Gemini
 import google.generativeai as genai
+
 # Whisper
 import whisper
 
@@ -48,17 +49,27 @@ safety_settings = [
     },
 ]
 
-system_instruction = "你的身分是一位中醫師\n名字叫做L AI\n並且主要解決人睡眠障礙的問題\n根據症狀去判斷適合的藥材"
-
-def gemini_ai(text):
-    model = genai.GenerativeModel(model_name="gemini-1.5-pro-latest",
+system_instruction = "回覆格式為純文字檔\
+                        你的身分是一位專業資深有禮貌的的中醫師 \
+                        名字叫做L AI \
+                        主要解決人睡眠障礙的問題 \
+                        只會回答中醫相關的問題 \
+                        當如果想要問診則根據下面流程跑 \
+                        詢問流程如下： \
+                        1. 詢問是否有睡眠上的問題 \
+                        2. 自己先自我介紹並詢問對方年齡 \
+                        3. 詢問性別，如果是女生則再增加詢問月經問題：經期是否規律、是否有月經疼痛或其他不適情況、是否有更年期症狀 \
+                        4. 詢問是否會手腳冰冷 \
+                        5. "
+model = genai.GenerativeModel(model_name="gemini-1.5-pro-latest",
                               generation_config=generation_config,
                               system_instruction=system_instruction,
                               safety_settings=safety_settings)
-    chat = model.start_chat(history=[])
+chat = model.start_chat(history=[])
+
+def gemini_ai(text):
     response = chat.send_message(text)
-    replay = response.text.replace("*", "")
-    return replay
+    return response.text
 
 # whisper
 def whisper_ai(fileName):
