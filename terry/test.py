@@ -82,19 +82,25 @@ def symtoms_seperate(number):
             cause.append(i)
             ans_index.append(index)
             temp=""
+            temp_explain=""
             for k in range(number):
-                if k == number-1: temp+=possible_symtoms[j][k]
-                else: temp+=possible_symtoms[j][k] + "、"
+                if k == number-1: 
+                    temp+=possible_symtoms[j][k]
+                    temp_explain+=terms_explanation[possible_symtoms[j][k]]
+                else: 
+                    temp+=possible_symtoms[j][k] + "、"
+                    temp_explain+=terms_explanation[possible_symtoms[j][k]] + "，"
             symtoms.append(temp)
+            persona.append(temp_explain)
         index+=1
 
 
-symtoms_seperate(3)            
+symtoms_seperate(2)            
     
 
-data = {'ans_idx': ans_index,'cause': cause,'symptoms': symtoms,}
+data = {'ans_idx': ans_index,'cause': cause,'symptoms': symtoms,'persona': persona}
 
 test = pd.DataFrame(data)
-test.to_csv('testing3.csv', index=False)
+test.to_csv('testing2.csv', index=False)
 
 
