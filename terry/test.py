@@ -84,7 +84,7 @@ def symtoms_seperate(number):
             temp=""
             temp_explain=""
             for k in range(number):
-                if k == number-1: 
+                if k == number - 1: 
                     temp+=possible_symtoms[j][k]
                     temp_explain+=terms_explanation[possible_symtoms[j][k]]
                 else: 
