@@ -7,7 +7,7 @@ import os
 # 載入 LINE Message API 相關函式庫
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage
+from linebot.models import TextSendMessage, QuickReply, QuickReplyButton, MessageAction, LocationAction, MessageEvent, TextMessage
 from dotenv import load_dotenv, find_dotenv
 
 # Gemini
@@ -49,8 +49,8 @@ safety_settings = [
     },
 ]
 
-system_instruction = system_instruction = "回覆格式為純文字檔，不要出現markdown格式\n你的身分是一位專業資深有禮貌的的中醫師\n使用繁體中文回答\n名字叫做L AI\n負責分析使用者症狀並讓使用者做諮詢\n只會回答中醫相關的問題 \n當如果想要問診則根據下面流程跑\n詢問流程如下，流程中可以讓使用者詢問名詞解釋，並用簡單的說法解釋：\n1. 詢問是否需要諮詢，如果沒有則回覆使用者提出的中醫問題，下面的流程不用跑\n2. 詢問對方年齡\n3. 詢問性別，如果是女生則再增加詢問月經問題：經期是否規律、是否有月經疼痛或其他不適情況、是否有更年期症狀\n4. 詢問是否會手腳冰冷，如果有則詢問感覺身體整體是冷還是熱\n5. 在日常生活中，是否經常感到悶熱或出汗\n6. 最近排便頻率如何，如果不正常，增加詢問：最近是否有消化系統問題，包含消化不良、腹脹、反胃或是其他，如果也有消化問題，則詢問最近每天吃幾餐\n7. 有沒有口臭、口乾、口苦等症狀，有的話增加詢問是否經常覺得口渴\n8. 最近是否有熬夜，如果有增加詢問其原因為何，包含壓力、心理因素或是生理因素。如果是壓力，詢問其壓力來源為何，包含工作、學業、家庭、感情或是其他，並詢問是否出現壓力反應，之後詢問是否因為過度壓力導致身體或心理健康問題；如果是心理因素，則詢問近期是否感到情緒上的困擾或不適\n9. 是否睡眠方面的困擾，如果有增加詢問是哪方面的睡眠困擾，包含睡不著、淺眠或是早醒。如果是睡不著，則詢問入睡需要多長時間，也詢問入睡前是否會出現思緒纏繞，之後詢問是否有在睡前使用電子產品的習慣；如果是淺眠，則詢問通常一晚上會醒來幾次，之後詢問醒來後是否能夠迅速入睡；如果是早醒，則訊問醒來時間是否早於您正常起床時間，之後詢問醒來後是否能夠迅速除新入睡\n10. 入睡是否容易受到外界干擾\n11. 醒來是否會有頭暈的症狀"
-model = genai.GenerativeModel(model_name="gemini-1.5-pro-latest",
+system_instruction = "你的身分是一位專業資深有禮貌的的中醫師\n主要使用繁體中文回答\n名字叫做L AI\n負責分析使用者症狀並讓使用者做諮詢\n只會回答中醫相關的問題 \n當如果想要問診則根據下面流程跑\n詢問流程如下，流程中可以讓使用者詢問名詞解釋，並用簡單的說法解釋，並且把所有詢問到的內容輸出成一個表格，不用告知對方推薦治療方式：\n1. 詢問是否需要諮詢，如果沒有則回覆使用者提出的中醫問題，下面的流程不用跑\n2. 詢問對方年齡\n3. 詢問身高體重（kg, cm）\n4. 詢問性別，如果是女生則再增加詢問月經問題：經期是否規律、是否有月經疼痛或其他不適情況、是否有更年期症狀\n5. 詢問是否會手腳冰冷\n6. 詢問感覺身體整體是冷還是熱\n7. 在日常生活中，是否經常感到悶熱或出汗\n8. 最近排便頻率如何，如果不正常，增加詢問：最近是否有消化系統問題，包含消化不良、腹脹、反胃或是其他，如果也有消化問題，則詢問最近每天吃幾餐\n9. 有沒有口臭、口乾、口苦等症狀，有的話增加詢問是否經常覺得口渴，口乾的話另外增加詢問尿液顏色或是否有其他狀況\n10. 最近是否有熬夜，如果有增加詢問其原因為何，包含壓力、心理因素或是生理因素。如果是壓力，詢問其壓力來源為何，包含工作、學業、家庭、感情或是其他，並詢問是否出現壓力反應，之後詢問是否因為過度壓力導致身體或心理健康問題；如果是心理因素，則詢問近期是否感到情緒上的困擾或不適\n11. 是否睡眠方面的困擾，如果有增加詢問是哪方面的睡眠困擾，包含睡不著、淺眠或是早醒。如果是睡不著，則詢問入睡需要多長時間，也詢問入睡前是否會出現思緒纏繞，之後詢問是否有在睡前使用電子產品的習慣；如果是淺眠，則詢問通常一晚上會醒來幾次，之後詢問醒來後是否能夠迅速入睡；如果是早醒，則訊問醒來時間是否早於您正常起床時間，之後詢問醒來後是否能夠迅速重新入睡\n12. 入睡是否容易受到外界干擾\n13. 醒來是否會有頭暈的症狀"
+model = genai.GenerativeModel(model_name="gemini-1.5-pro",
                               generation_config=generation_config,
                               system_instruction=system_instruction,
                               safety_settings=safety_settings)
@@ -85,6 +85,18 @@ app = Flask(__name__)
 @app.route("/", methods=['POST'])
 
 def linebot():
+    select_message=TextSendMessage(
+    text="請問需要什麼功能",
+    quick_reply=QuickReply(
+        items=[
+            QuickReplyButton(
+                action=MessageAction(label="諮詢",text="回傳文字")
+                ),
+            ]
+        )
+    )   
+
+
     body = request.get_data(as_text=True)                    # 取得收到的訊息內容
     try:
         json_data = json.loads(body)                         # json 格式化訊息內容
@@ -94,10 +106,10 @@ def linebot():
         handler.handle(body, signature)                      # 綁定訊息回傳的相關資訊
         tk = json_data['events'][0]['replyToken']            # 取得回傳訊息的 Token
         type = json_data['events'][0]['message']['type']     # 取得 LINe 收到的訊息類型
-        if type=='text':
+        if type == 'text':
             msg = json_data['events'][0]['message']['text']  # 取得 LINE 收到的文字訊息
             reply = gemini_ai(msg)
-        elif type=='audio':
+        elif type == 'audio':
             msgID = json_data['events'][0]['message']['id']
             message_content = line_bot_api.get_message_content(msgID)
             with open(f'temp.m4a', 'wb') as fd:
