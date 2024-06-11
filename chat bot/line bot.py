@@ -1,4 +1,5 @@
 from flask import Flask, request
+import io
 
 # 載入 json 標準函式庫，處理回傳的資料格式
 import json
@@ -15,6 +16,13 @@ import google.generativeai as genai
 
 # Whisper
 import whisper
+
+# Storage
+import firebase_admin
+from firebase_admin import credentials, initialize_app, storage
+import firebase_admin.storage
+from google.cloud import storage
+from google.oauth2 import service_account
 
 # dotenv
 _ = load_dotenv(find_dotenv()) # read local .env file
@@ -80,6 +88,38 @@ def whisper_ai(fileName):
     # print the recognized text
     return(result.text)
 
+# storage
+json_file = "key.json"
+
+# Init firebase with your credentials
+cred = credentials.Certificate(json_file)
+initialize_app(cred, {'storageBucket': 'aetheria-7fcbf.appspot.com'})
+
+# upload file
+def upload_blob(bucket_name, source_file_name, destination_blob_name):
+    credentials = service_account.Credentials.from_service_account_file(json_file)
+    storage_client = storage.Client(credentials=credentials)
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(destination_blob_name)
+    source_file_name.seek(0)
+    blob.upload_from_filename(source_file_name)
+
+# upload_blob(firebase_admin.storage.bucket().name, 'temp.m4a', 'test/123.m4a')
+
+# download file
+def download_blob(bucket_name, source_blob_name, download_file_name):
+    credentials = service_account.Credentials.from_service_account_file(json_file)
+    storage.Client(credentials=credentials).bucket(bucket_name).blob(source_blob_name).download_to_filename(download_file_name)
+
+# download_blob(firebase_admin.storage.bucket().name, 'test/123.m4a', 'download.m4a')
+
+def delete_blob(bucket_name,  delete_file_name):
+    credentials = service_account.Credentials.from_service_account_file(json_file)
+    storage.Client(credentials=credentials).bucket(bucket_name).blob(delete_file_name).delete()
+
+# delete_blob(firebase_admin.storage.bucket().name, 'temp.m4a')
+
+
 # line bot
 app = Flask(__name__)
 @app.route("/", methods=['POST'])
@@ -106,16 +146,20 @@ def linebot():
         handler.handle(body, signature)                      # 綁定訊息回傳的相關資訊
         tk = json_data['events'][0]['replyToken']            # 取得回傳訊息的 Token
         type = json_data['events'][0]['message']['type']     # 取得 LINe 收到的訊息類型
+
         if type == 'text':
             msg = json_data['events'][0]['message']['text']  # 取得 LINE 收到的文字訊息
             reply = gemini_ai(msg)
+
         elif type == 'audio':
             msgID = json_data['events'][0]['message']['id']
             message_content = line_bot_api.get_message_content(msgID)
-            with open(f'temp.m4a', 'wb') as fd:
-                fd.write(message_content.content)
-            msg = whisper_ai('temp.m4a')
-            reply = gemini_ai(msg)
+            
+            audio_data = io.BytesIO(message_content.content)
+            
+            upload_blob(firebase_admin.storage.bucket().name, audio_data,'123.m4a')
+
+            print("success")
         else:
             reply = '你傳的不是文字呦～'       
         line_bot_api.reply_message(tk,TextSendMessage(reply))# 回傳訊息
