@@ -60,6 +60,9 @@ class PersonalInfoBase(BaseModel):
     height: float = Field(0, description="Chatting user's height, 0 if unknown")
     weight: float = Field(0, description="Chatting user's weight, 0 if unknown")
     gender: str = Field('unknown', description="Chatting user's weight, unknown if unknown")
+    summary: str = Field('unknown', description="Running summary of conversation. Update this with new input")
+    response: str = Field('unknown', description="An ideal response to the user based on their new message")
+    
 
 # LLM Model
 load_dotenv()
@@ -77,7 +80,7 @@ bot_main_prompt = ChatPromptTemplate.from_template(
     " Do not hallucinate any details, and make sure the knowledge base is not redundant."
     " Update the entries frequently to adapt to the conversation flow."
     "\n{format_instructions}"
-    "\n\nOLD KNOWLEDGE BASE: {know_base}"
+    "\n\nOLD KNOWLEDGE BASE: {info_base}"
     "\n\nNEW MESSAGE: {input}"
     "\n\nNEW KNOWLEDGE BASE:"
 )
@@ -86,7 +89,7 @@ extractor = RExtract(PersonalInfoBase, instruct_llm, bot_main_prompt)
 info_update = RunnableAssign({'know_base' : extractor})
 
 ## Initialize the knowledge base and see what you get
-state = {'know_base' : PersonalInfoBase()}
+state = {'info_base' : PersonalInfoBase()}
 state['input'] = "My name is Carmen Sandiego! Guess where I am! Hint: It's somewhere in the United States."
 state = info_update.invoke(state)
 pprint(state)
