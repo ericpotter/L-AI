@@ -89,7 +89,7 @@ class PersonalInfoBase(BaseModel):
     
     open_problems: str = Field("", description="Informations that are unknown")
     current_goals: str = Field("", description="Current goal for the agent to address")
-    summary: str = Field("", description="Summary of discussion so far")
+    summary: str = Field("", description="Running summary of conversation. Update this with new input")
     
     
     
