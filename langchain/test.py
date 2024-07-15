@@ -58,31 +58,51 @@ def RExtract(pydantic_class, llm, prompt):
 # Database
 class PersonalInfoBase(BaseModel):
     # basic information
-    name: str = Field('unknown', description="Chatting user's name, unknown if unknown")
-    height: float = Field(0, description="Chatting user's height in centimeter, 0 if unknown")
-    weight: float = Field(0, description="Chatting user's weight in kilogram, 0 if unknown")
-    gender: str = Field('unknown', description="Chatting user's weight, unknown if unknown")
-    period: str = Field('unknown', description="Summary of chatting user's period problems, unknown if unknown, None if User is a male")
-    menopause: str = Field('unknown', description="Whether chatting user have menopause, unknown if unknown, None if User is a male")
+    # name: str = Field('unknown', description="Chatting user's name, unknown if unknown")
+    height: float = Field(0, description="Chatting user's height in centimeter, '0' if unknown")
+    weight: float = Field(0, description="Chatting user's weight in kilogram, '0' if unknown")
+    gender: str = Field('unknown', description="Chatting user's weight, 'unknown' if unknown")
+    period: str = Field('unknown', description="Summary of chatting user's period problems, 'unknown' if unknown, None if User is a male")
+    menopause: str = Field('unknown', description="Whether chatting user have menopause, 'unknown' if unknown, None if User is a male")
     
     # common information
-    hand_foot: str = Field('unknown', description="Summary of chatting user's hands and feet condition, whether feeling cold, unknown if unknown")
-    body: str = Field('unknown', description="Summary of chatting user's body condition, whether often feeling hot or sweaty, unknown if unknown")
+    hand_foot: str = Field('unknown', description="Whether chatting user's feet and hands often feel cold, 'unknown' if unknown")
+    body: str = Field('unknown', description="Whether chatting user's body often feeling hot or sweaty, 'unknown' if unknown")
+    defecation: str = Field('unknown', description="Summary of chatting user's defecation condition, 'normal' if normal")
+    disgestive_system: str = Field('unknown', description="Summary of chatting user's disgestive system, 'None' if defecation is normal")
+    
+    # Meals
+    meals: str = Field('unknown', description="Whether chatting user's meals is normal, 'normal' if normal")
+    mouth: str = Field('unknown', description="Summary of chatting user's mouth condition including bitter mouth, dry mouth, bad breath and thirst, 'normal' if normal")
+    urine: str = Field('unknown', description="Summary of chatting user's urine condition, 'normal' if user don't have thirst" )
+
+    # sleep
+    sleep: str = Field('unknown', description="Summary of chatting user's sleep condition, including sleep time, light sleep problem, can't fall asleep, and wake up early, 'normal' if normal")
+    phone: str = Field('unknown', description="Whether chatting user uses cellphone before sleeping, 'None' if sleep is normal")
+    
+    # Stay up
+    stay_up: str = Field('unknown', description="Whether chatting user often stays up")
+    
+    # Mental
+    pressure: str = Field('unknown', description="Whether chatting user suffer from some pressure and what are the reasons, 'normal'if normal")
     
     
-    open_problems: str = Field("", description="Topics that have not been resolved yet")
+    open_problems: str = Field("", description="Informations that are unknown")
     current_goals: str = Field("", description="Current goal for the agent to address")
     summary: str = Field("", description="Summary of discussion so far")
+    
     
     
 # prompt
 main_bot_prompt = ChatPromptTemplate.from_messages([
     ("system", (
-        "Your are a courteous Chinese medicine consultation system named L AI."
+        "Your are a courteous Chinese medicine consultation chatbot named L AI."
         "Don't answer irrelevant questions regarding user's personal health"
         "Using Traditional Chinese to answer"
         "When the user wants medical consultation, only ask for their personal information one by one based on {info_base}, and give them what specific units they have to provide"
         "Your running knowledge base is: {info_base}."
+        "This is for you only; Do not mention it!"
+        "Don't ask the same questions"
     )),
     ("assistant", "{output}"),
     ("user", "{input}"),
@@ -142,7 +162,7 @@ def chat_gen(message, history=[], return_buffer=True):
         buffer += token
         yield buffer if return_buffer else token
 
-def queue_fake_streaming_gradio(chat_stream, history = [], max_questions=100):
+def queue_fake_streaming_gradio(chat_stream, history = [], max_questions=10):
 
     ## Mimic of the gradio initialization routine, where a set of starter messages can be printed off
     for human_msg, agent_msg in history:
