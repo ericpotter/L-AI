@@ -1,20 +1,22 @@
 import getpass
 import os
-from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnableLambda
-from langchain.schema.runnable import RunnableBranch, RunnablePassthrough
-from langchain.schema.runnable.passthrough import RunnableAssign
-from langchain.output_parsers import PydanticOutputParser
 from dotenv import load_dotenv
 from IPython.display import Markdown, display
+import gradio as gr
+
+from langchain_core.messages import HumanMessage, SystemMessage, ChatMessage, AIMessage
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnableLambda
+from langchain.schema.runnable import RunnableBranch, RunnablePassthrough, RunnableMap, RunnableLambda
+from langchain.schema.runnable.passthrough import RunnableAssign
+from langchain.output_parsers import PydanticOutputParser
+
 from functools import partial
-from typing import List, Union, Optional, Dict
+from typing import List, Union, Optional, Dict, Iterable
 from operator import itemgetter
 from pydantic import BaseModel, Field
-
 
 from rich.console import Console
 from rich.style import Style
@@ -46,8 +48,8 @@ def RExtract(pydantic_class, llm, prompt):
         string = (string
             .replace("\\_", "_")
             .replace("\n", " ")
-            .replace("\]", "]")
-            .replace("\[", "[")
+            .replace("]", "]")
+            .replace("[", "[")
         )
         # print(string)  ## Good for diagnostics
         return string
@@ -55,41 +57,117 @@ def RExtract(pydantic_class, llm, prompt):
 
 # Database
 class PersonalInfoBase(BaseModel):
-    ## Fields of the BaseModel, which will be validated/assigned when the knowledge base is constructed
+    # basic information
     name: str = Field('unknown', description="Chatting user's name, unknown if unknown")
-    height: float = Field(0, description="Chatting user's height, 0 if unknown")
-    weight: float = Field(0, description="Chatting user's weight, 0 if unknown")
+    height: float = Field(0, description="Chatting user's height in centimeter, 0 if unknown")
+    weight: float = Field(0, description="Chatting user's weight in kilogram, 0 if unknown")
     gender: str = Field('unknown', description="Chatting user's weight, unknown if unknown")
-    summary: str = Field('unknown', description="Running summary of conversation. Update this with new input")
-    response: str = Field('unknown', description="An ideal response to the user based on their new message")
+    period: str = Field('unknown', description="Summary of chatting user's period problems, unknown if unknown, None if User is a male")
+    menopause: str = Field('unknown', description="Whether chatting user have menopause, unknown if unknown, None if User is a male")
     
+    # common information
+    hand_foot: str = Field('unknown', description="Summary of chatting user's hands and feet condition, whether feeling cold, unknown if unknown")
+    body: str = Field('unknown', description="Summary of chatting user's body condition, whether often feeling hot or sweaty, unknown if unknown")
+    
+    
+    open_problems: str = Field("", description="Topics that have not been resolved yet")
+    current_goals: str = Field("", description="Current goal for the agent to address")
+    summary: str = Field("", description="Summary of discussion so far")
+    
+    
+# prompt
+main_bot_prompt = ChatPromptTemplate.from_messages([
+    ("system", (
+        "Your are a courteous Chinese medicine consultation system named L AI."
+        "Don't answer irrelevant questions regarding user's personal health"
+        "Using Traditional Chinese to answer"
+        "When the user wants medical consultation, only ask for their personal information one by one based on {info_base}, and give them what specific units they have to provide"
+        "Your running knowledge base is: {info_base}."
+    )),
+    ("assistant", "{output}"),
+    ("user", "{input}"),
+])
 
-# LLM Model
+parser_prompt = ChatPromptTemplate.from_template(
+    "You are a chat assistant, and are trying to track info about the conversation."
+    " You have just recieved a message from the user. Please fill in the schema based on the chat."
+    "\n\n{format_instructions}"
+    "\n\nOLD KNOWLEDGE BASE: {info_base}"
+    "\n\nASSISTANT RESPONSE: {output}"
+    "\n\nUSER MESSAGE: {input}"
+    "\n\nNEW KNOWLEDGE BASE: "
+)
+
+
+# LLM Model & Chain
 load_dotenv()
+
 if "GOOGLE_API_KEY" not in os.environ:
     os.environ["GOOGLE_API_KEY"] = getpass.getpass("Provide your Google API Key")
 
-model = ChatGoogleGenerativeAI(model="gemini-1.5-flash", convert_system_message_to_human=True)
+model = ChatGoogleGenerativeAI(model="gemini-1.5-flash")
 instruct_llm = model | StrOutputParser()
+chat_llm = model | StrOutputParser()
+external_chain = main_bot_prompt | chat_llm
 
 
-# prompt
-bot_main_prompt = ChatPromptTemplate.from_template(
-    "You are chatting with a user. The user just responded ('input'). Please update the knowledge base."
-    " Record your response in the 'response' tag to continue the conversation."
-    " Do not hallucinate any details, and make sure the knowledge base is not redundant."
-    " Update the entries frequently to adapt to the conversation flow."
-    "\n{format_instructions}"
-    "\n\nOLD KNOWLEDGE BASE: {info_base}"
-    "\n\nNEW MESSAGE: {input}"
-    "\n\nNEW KNOWLEDGE BASE:"
+knowbase_getter = lambda x: PersonalInfoBase()
+knowbase_getter = RExtract(PersonalInfoBase, instruct_llm, parser_prompt)
+
+
+## These components integrate to make your internal chain
+internal_chain = (
+    RunnableAssign({'info_base' : knowbase_getter})
 )
 
-extractor = RExtract(PersonalInfoBase, instruct_llm, bot_main_prompt)
-info_update = RunnableAssign({'know_base' : extractor})
-
-## Initialize the knowledge base and see what you get
 state = {'info_base' : PersonalInfoBase()}
-state['input'] = "My name is Carmen Sandiego! Guess where I am! Hint: It's somewhere in the United States."
-state = info_update.invoke(state)
-pprint(state)
+
+# Chat implementation
+def chat_gen(message, history=[], return_buffer=True):
+
+    ## Pulling in, updating, and printing the state
+    global state
+    state['input'] = message
+    state['history'] = history
+    state['output'] = "" if not history else history[-1][1]
+
+    ## Generating the new state from the internal chain
+    state = internal_chain.invoke(state)
+    print("State after chain run:")
+    pprint({k:v for k,v in state.items() if k != "history"})
+
+    ## Streaming the results
+    buffer = ""
+    for token in external_chain.stream(state):
+        buffer += token
+        yield buffer if return_buffer else token
+
+def queue_fake_streaming_gradio(chat_stream, history = [], max_questions=100):
+
+    ## Mimic of the gradio initialization routine, where a set of starter messages can be printed off
+    for human_msg, agent_msg in history:
+        if human_msg: print("\n[ Human ]:", human_msg)
+        if agent_msg: print("\n[ Agent ]:", agent_msg)
+
+    ## Mimic of the gradio loop with an initial message from the agent.
+    for _ in range(max_questions):
+        message = input("\n[ Human ]: ")
+        print("\n[ Agent ]: ")
+        history_entry = [message, ""]
+        for token in chat_stream(message, history, return_buffer=False):
+            print(token, end='')
+            history_entry[1] += token
+        history += [history_entry]
+        print("\n")
+
+# history is of format [[User response 0, Bot response 0], ...]
+chat_history = [[None, "您好，我是AI中醫諮詢系統L AI，請問有什麼需要協助的嗎？"]]
+
+# Simulating the queueing of a streaming gradio interface, using python input
+queue_fake_streaming_gradio(
+    chat_stream = chat_gen,
+    history = chat_history
+)
+
+# chatbot = gr.Chatbot(value=[[None, "Hello! I'm your SkyFlow agent! How can I help you?"]])
+# demo = gr.ChatInterface(chat_gen, chatbot=chatbot).queue().launch(debug=True, share=True)
