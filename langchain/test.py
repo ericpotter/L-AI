@@ -26,6 +26,9 @@ console = Console()
 base_style = Style(color="#76B900", bold=True)
 pprint = partial(console.print, style=base_style)
 
+def is_traditional_chinese_or_digit(text):    
+    return all('\u4e00' <= char <= '\u9fff' or char.isdigit() for char in text)
+
 # Useful Tools
 def RPrint(preface="State: "):
     def print_and_return(x, preface=""):
@@ -159,6 +162,8 @@ def chat_gen(message, history=[], return_buffer=True):
     ## Streaming the results
     buffer = ""
     for token in external_chain.stream(state):
+        if is_traditional_chinese_or_digit(token):  
+            token = token.replace(" ", "").replace("\n", "").replace("\r", "").strip()
         buffer += token
         yield buffer if return_buffer else token
 
