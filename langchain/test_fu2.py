@@ -32,7 +32,8 @@ base_style = Style(color="#76B900", bold=True)
 pprint = partial(console.print, style=base_style)
 
 def is_traditional_chinese_or_digit(text):    
-    return all('\u4e00' <= char <= '\u9fff' or char.isdigit() for char in text)
+    converted_text = converter.convert(text)
+    return all('\u4e00' <= char <= '\u9fff' or char.isdigit() for char in text), converted_text
 
 # Useful Tools
 def RPrint(preface="State: "):
@@ -167,10 +168,17 @@ def chat_gen(message, history=[], return_buffer=True):
     ## Streaming the results
     buffer = ""
     for token in external_chain.stream(state):
-        if is_traditional_chinese_or_digit(token):  
-            token = token.replace(" ", "").replace("\n", "").replace("\r", "").strip()
-        buffer += token
-        yield buffer if return_buffer else token
+        if isinstance(token, str):
+            contains_traditional_chinese, converted_text = is_traditional_chinese_or_digit(token)
+            if contains_traditional_chinese:
+                token_output = converted_text
+            else:
+                token_output = token
+        else:
+            token_output = token
+        
+        buffer += token_output
+        yield buffer if return_buffer else token_output
 
 def queue_fake_streaming_gradio(chat_stream, history = [], max_questions=10):
 
@@ -185,10 +193,29 @@ def queue_fake_streaming_gradio(chat_stream, history = [], max_questions=10):
         print("\n[ Agent ]: ")
         history_entry = [message, ""]
         for token in chat_stream(message, history, return_buffer=False):
+            contains_traditional_chinese, converted_text = is_traditional_chinese_or_digit(token)
+            if contains_traditional_chinese:
+                token_output = converted_text
+            else:
+                token_output = token
+            print(token_output, end='')
+            history_entry[1] += token_output
+        history += [history_entry]
+        print("\n")
+
+"""
+    for _ in range(max_questions):
+        message = input("\n[ Human ]: ")
+        print("\n[ Agent ]: ")
+        history_entry = [message, ""]
+        for token in chat_stream(message, history, return_buffer=False):
             print(token, end='')
             history_entry[1] += token
         history += [history_entry]
         print("\n")
+"""
+    
+
 
 # history is of format [[User response 0, Bot response 0], ...]
 chat_history = [[None, "您好，我是AI中醫諮詢系統L AI，請問有什麼需要協助的嗎？"]]
@@ -207,13 +234,14 @@ def gradio_chat(input, history):
     history.append([input, ""])
     chat_gen_obj = chat_gen(input, history)
     for output in chat_gen_obj:
+        # 確保顯示的文本是繁體中文
         history[-1][1] = output
     return history, history
 
 with gr.Blocks() as demo:
     chatbot = gr.Chatbot(value=chat_history)
-    msg = gr.Textbox()
-    clear = gr.Button("Clear")
+    msg = gr.Textbox(placeholder="請輸入...")
+    clear = gr.Button("清除")
 
     def user_message(msg):
         return gr.update(value="", interactive=True), gr.update(interactive=False)
