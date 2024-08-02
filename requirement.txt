@@ -3,5 +3,6 @@ line-bot-sdk==3.11.0
 langchain==0.2.7
 langchain-google-genai==1.0.7
 python-dotenv==1.0.1
+pip install OpenCC
 
 pip install -r requirements.txt
