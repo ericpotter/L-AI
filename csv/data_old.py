@@ -107,4 +107,3 @@ if len(csv_files) > 0:
         df.to_csv('output' + csv_filename, index=False)
 else:
     print("No Document")
-
