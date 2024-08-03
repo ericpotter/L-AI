@@ -89,8 +89,8 @@ main_bot_prompt = ChatPromptTemplate.from_messages([
 
 # 解析器提示模板
 parser_prompt = ChatPromptTemplate.from_template(
-    "您是聊天助手，並試圖追蹤有關對話的信息。"
-    "您剛剛收到了用戶的消息。請根據聊天內容填寫以下架構。"
+    "你是聊天助手，並試圖追蹤有關對話的信息。"
+    "你剛剛收到了用戶的消息。請根據聊天內容填寫以下架構。"
     "\n\n{format_instructions}"
     "\n\n舊的知識庫: {info_base}"
     "\n\n助手回應: {output}"
@@ -100,7 +100,7 @@ parser_prompt = ChatPromptTemplate.from_template(
 
 # 確認資訊完整
 fail_info = (
-    "你沒辦法給我適當的診斷直到搜集使用者的全部資訊"
+    "你沒辦法給適當的診斷直到搜集使用者的全部資訊"
     "包含以下部分：{open_problems}"
 )
 
