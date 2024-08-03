@@ -1,3 +1,4 @@
+
 import getpass
 import os
 from dotenv import load_dotenv
@@ -22,17 +23,17 @@ from rich.console import Console
 from rich.style import Style
 from rich.theme import Theme
 
-#transfer chinese
+# Transfer Chinese
 import opencc
 converter = opencc.OpenCC('s2t') 
-
 
 console = Console()
 base_style = Style(color="#76B900", bold=True)
 pprint = partial(console.print, style=base_style)
 
 def is_traditional_chinese_or_digit(text):    
-    return all('\u4e00' <= char <= '\u9fff' or char.isdigit() for char in text)
+    converted_text = converter.convert(text)
+    return all('\u4e00' <= char <= '\u9fff' or char.isdigit() for char in text), converted_text
 
 # Useful Tools
 def RPrint(preface="State: "):
@@ -59,58 +60,36 @@ def RExtract(pydantic_class, llm, prompt):
             .replace("]", "]")
             .replace("[", "[")
         )
-        # print(string)  ## Good for diagnostics
         return string
+
     return instruct_merge | prompt | llm | preparse | parser
 
 # Database
 class PersonalInfoBase(BaseModel):
-    # basic information
-    # name: str = Field('unknown', description="Chatting user's name, unknown if unknown")
     height: float = Field(0, description="Chatting user's height in centimeter, '0' if unknown")
     weight: float = Field(0, description="Chatting user's weight in kilogram, '0' if unknown")
-    gender: str = Field('unknown', description="Chatting user's weight, 'unknown' if unknown")
-    period: str = Field('unknown', description="Summary of chatting user's period problems, 'unknown' if unknown, None if User is a male")
-    menopause: str = Field('unknown', description="Whether chatting user have menopause, 'unknown' if unknown, None if User is a male")
-    
-    # common information
+    gender: str = Field('unknown', description="Chatting user's gender, 'unknown' if unknown")
+    period: str = Field('unknown', description="Summary of chatting user's period problems, 'unknown' if unknown, None if user is male")
+    menopause: str = Field('unknown', description="Whether chatting user has menopause, 'unknown' if unknown, None if user is male")
     hand_foot: str = Field('unknown', description="Whether chatting user's feet and hands often feel cold, 'unknown' if unknown")
-    body: str = Field('unknown', description="Whether chatting user's body often feeling hot or sweaty, 'unknown' if unknown")
+    body: str = Field('unknown', description="Whether chatting user's body often feels hot or sweaty, 'unknown' if unknown")
     defecation: str = Field('unknown', description="Summary of chatting user's defecation condition, 'normal' if normal")
-    disgestive_system: str = Field('unknown', description="Summary of chatting user's disgestive system, 'None' if defecation is normal")
-    
-    # Meals
-    meals: str = Field('unknown', description="Whether chatting user's meals is normal, 'normal' if normal")
-    mouth: str = Field('unknown', description="Summary of chatting user's mouth condition including bitter mouth, dry mouth, bad breath and thirst, 'normal' if normal")
-    urine: str = Field('unknown', description="Summary of chatting user's urine condition, 'normal' if user don't have thirst" )
-
-    # sleep
+    digestive_system: str = Field('unknown', description="Summary of chatting user's digestive system, 'None' if defecation is normal")
+    meals: str = Field('unknown', description="Whether chatting user's meals are normal, 'normal' if normal")
+    mouth: str = Field('unknown', description="Summary of chatting user's mouth condition including bitter mouth, dry mouth, bad breath, and thirst, 'normal' if normal")
+    urine: str = Field('unknown', description="Summary of chatting user's urine condition, 'normal' if user doesn't have thirst")
     sleep: str = Field('unknown', description="Summary of chatting user's sleep condition, including sleep time, light sleep problem, can't fall asleep, and wake up early, 'normal' if normal")
     phone: str = Field('unknown', description="Whether chatting user uses cellphone before sleeping, 'None' if sleep is normal")
-    
-    # Stay up
     stay_up: str = Field('unknown', description="Whether chatting user often stays up")
-    
-    # Mental
-    pressure: str = Field('unknown', description="Whether chatting user suffer from some pressure and what are the reasons, 'normal'if normal")
-    
-    
-    open_problems: str = Field("", description="Informations that are unknown")
+    pressure: str = Field('unknown', description="Whether chatting user suffers from some pressure and what are the reasons, 'normal' if normal")
+    open_problems: str = Field("", description="Information that is unknown")
     current_goals: str = Field("", description="Current goal for the agent to address")
     summary: str = Field("", description="Running summary of conversation. Update this with new input")
-    
-    
-    
-# prompt
+
+# Prompt
 main_bot_prompt = ChatPromptTemplate.from_messages([
     ("system", (
-        "Your are a courteous Chinese medicine consultation chatbot named L AI."
-        "Don't answer irrelevant questions regarding user's personal health"
-        "Using Traditional Chinese to answer"
-        "When the user wants medical consultation, only ask for their personal information one by one based on {info_base}, and give them what specific units they have to provide"
-        "Your running knowledge base is: {info_base}."
-        "This is for you only; Do not mention it!"
-        "Don't ask the same questions"
+        "您好，我是AI中醫諮詢系統L AI，請問有什麼需要幫忙的嗎？"
     )),
     ("assistant", "{output}"),
     ("user", "{input}"),
@@ -118,14 +97,13 @@ main_bot_prompt = ChatPromptTemplate.from_messages([
 
 parser_prompt = ChatPromptTemplate.from_template(
     "You are a chat assistant, and are trying to track info about the conversation."
-    " You have just recieved a message from the user. Please fill in the schema based on the chat."
+    " You have just received a message from the user. Please fill in the schema based on the chat."
     "\n\n{format_instructions}"
     "\n\nOLD KNOWLEDGE BASE: {info_base}"
     "\n\nASSISTANT RESPONSE: {output}"
     "\n\nUSER MESSAGE: {input}"
     "\n\nNEW KNOWLEDGE BASE: "
 )
-
 
 # LLM Model & Chain
 load_dotenv()
@@ -138,10 +116,8 @@ instruct_llm = model | StrOutputParser()
 chat_llm = model | StrOutputParser()
 external_chain = main_bot_prompt | chat_llm
 
-
 knowbase_getter = lambda x: PersonalInfoBase()
 knowbase_getter = RExtract(PersonalInfoBase, instruct_llm, parser_prompt)
-
 
 ## These components integrate to make your internal chain
 internal_chain = (
@@ -167,10 +143,17 @@ def chat_gen(message, history=[], return_buffer=True):
     ## Streaming the results
     buffer = ""
     for token in external_chain.stream(state):
-        if is_traditional_chinese_or_digit(token):  
-            token = token.replace(" ", "").replace("\n", "").replace("\r", "").strip()
-        buffer += token
-        yield buffer if return_buffer else token
+        if isinstance(token, str):
+            contains_traditional_chinese, converted_text = is_traditional_chinese_or_digit(token)
+            if contains_traditional_chinese:
+                token_output = converted_text
+            else:
+                token_output = token
+        else:
+            token_output = token
+        
+        buffer += token_output
+        yield buffer if return_buffer else token_output
 
 def queue_fake_streaming_gradio(chat_stream, history = [], max_questions=10):
 
@@ -185,24 +168,21 @@ def queue_fake_streaming_gradio(chat_stream, history = [], max_questions=10):
         print("\n[ Agent ]: ")
         history_entry = [message, ""]
         for token in chat_stream(message, history, return_buffer=False):
-            print(token, end='')
-            history_entry[1] += token
+            contains_traditional_chinese, converted_text = is_traditional_chinese_or_digit(token)
+            if contains_traditional_chinese:
+                token_output = converted_text
+            else:
+                token_output = token
+            print(token_output, end='')
+            history_entry[1] += token_output
         history += [history_entry]
         print("\n")
 
-# history is of format [[User response 0, Bot response 0], ...]
-chat_history = [[None, "您好，我是AI中醫諮詢系統L AI，請問有什麼需要協助的嗎？"]]
 
 # Simulating the queueing of a streaming gradio interface, using python input
-"""
-備註內容
-queue_fake_streaming_gradio(
-    chat_stream = chat_gen,
-    history = chat_history
-)"""
 
-#chatbot = gr.Chatbot(value=[[None, "Hello! I'm your SkyFlow agent! How can I help you?"]])
-#demo = gr.ChatInterface(chat_gen, chatbot=chatbot).queue().launch(debug=True, share=True)
+chat_history = [[None, "您好，我是AI中醫諮詢系統L AI，請問有什麼需要協助的嗎？"]]
+
 def gradio_chat(input, history):
     history.append([input, ""])
     chat_gen_obj = chat_gen(input, history)
@@ -212,11 +192,8 @@ def gradio_chat(input, history):
 
 with gr.Blocks() as demo:
     chatbot = gr.Chatbot(value=chat_history)
-    msg = gr.Textbox()
-    clear = gr.Button("Clear")
-
-    def user_message(msg):
-        return gr.update(value="", interactive=True), gr.update(interactive=False)
+    msg = gr.Textbox(placeholder="請輸入...")
+    clear = gr.Button("清除")
 
     msg.submit(gradio_chat, [msg, chatbot], [chatbot, chatbot])
     clear.click(lambda: None, None, chatbot, queue=False).then(lambda: "", None, msg)
