@@ -1,1 +1,0 @@
-name: str = Field('unknown', description="Chatting user's name, unknown if unknown")
