@@ -2,6 +2,7 @@ import getpass
 import os
 from dotenv import load_dotenv
 import gradio as gr
+from operator import itemgetter
 
 from langchain_core.messages import HumanMessage, SystemMessage, ChatMessage, AIMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -58,6 +59,29 @@ def RExtract(pydantic_class, llm, prompt):
 
     return instruct_merge | prompt | llm | preparse | parser
 
+def get_info_fn(base: BaseModel) -> dict:
+    '''Given a PersonalInfoBase instance, return a dictionary with relevant information.'''
+    return {
+        'height': str(base.height),
+        'weight': str(base.weight),
+        'gender': base.gender,
+        'period': base.period,
+        'menopause': base.menopause,
+        'hand_foot': base.hand_foot,
+        'body': base.body,
+        'defecation': base.defecation,
+        'digestive_system': base.digestive_system,
+        'meals': base.meals,
+        'mouth': base.mouth,
+        'urine': base.urine,
+        'sleep': base.sleep,
+        'phone': base.phone,
+        'stay_up': base.stay_up,
+        'pressure': base.pressure,
+    }
+
+get_info = RunnableLambda(get_info_fn)
+
 # 個人信息的資料庫模型
 class PersonalInfoBase(BaseModel):
     height: float = Field(0, description = "聊天用戶的身高（公分），如果未知則為 '0'")
@@ -82,26 +106,29 @@ class PersonalInfoBase(BaseModel):
 
 # 聊天機器人的提示模板
 main_bot_prompt = ChatPromptTemplate.from_messages([
-    ("system", "您好，我是AI中醫諮詢系統L AI，請問今天需要諮詢嗎？"),
+    ("system", (
+        "你是中醫診斷的機器人L AI，功能是協助問診，根據目前檢索的資料中: {context}，針對unknown的資訊進行提問"
+        " Please chat with them! Stay concise and clear!"
+        " Your running knowledge base is: {info_base}."
+        " This is for you only; Do not mention it!"
+        " Do not ask them any other personal info."
+        " The checking happens automatically; you cannot check manually."
+    )),
     ("assistant", "{output}"),
     ("user", "{input}"),
 ])
 
 # 解析器提示模板
 parser_prompt = ChatPromptTemplate.from_template(
-    "你是聊天助手，並試圖追蹤有關對話的信息。"
-    "你剛剛收到了用戶的消息。請根據聊天內容填寫以下架構。"
-    "\n\n{format_instructions}"
-    "\n\n舊的知識庫: {info_base}"
-    "\n\n助手回應: {output}"
-    "\n\n用戶消息: {input}"
-    "\n\n新的知識庫: "
-)
-
-# 確認資訊完整
-fail_info = (
-    "你沒辦法給適當的診斷直到搜集使用者的全部資訊"
-    "包含以下部分：{open_problems}"
+    "You are chatting with a user. The user just responded ('input'). Please update the knowledge base."
+    " Record your response in the 'response' tag to continue the conversation."
+    " Do not hallucinate any details, and make sure the knowledge base is not redundant."
+    " Update the entries frequently to adapt to the conversation flow."
+    "\n{format_instructions}"
+    "\n\nOLD KNOWLEDGE BASE: {info_base}"
+    "\n\nASSISTANT RESPONSE: {output}"
+    "\n\nNEW MESSAGE: {input}"
+    "\n\nNEW KNOWLEDGE BASE:"
 )
 
 # 加載環境變量
@@ -113,7 +140,7 @@ if "GOOGLE_API_KEY" not in os.environ:
 
 # 初始化語言模型
 model = ChatGoogleGenerativeAI(model = "gemini-1.5-flash")
-instruct_llm = model | StrOutputParser()
+instruct_llm = model | StrOutputParser() # 輸出結構化
 chat_llm = model | StrOutputParser()
 external_chain = main_bot_prompt | chat_llm
 
@@ -121,9 +148,13 @@ external_chain = main_bot_prompt | chat_llm
 knowbase_getter = lambda x: PersonalInfoBase()
 knowbase_getter = RExtract(PersonalInfoBase, instruct_llm, parser_prompt)
 
+database_getter = lambda x: "Not implemented"
+database_getter = itemgetter('info_base') | get_info
+
 # 管理狀態的內部鏈
 internal_chain = (
     RunnableAssign({'info_base': knowbase_getter})
+    | RunnableAssign({'context' : database_getter})
 )
 
 # 初始化狀態
