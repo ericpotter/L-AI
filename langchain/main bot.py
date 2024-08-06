@@ -62,8 +62,8 @@ def RExtract(pydantic_class, llm, prompt):
 def get_info_fn(base: BaseModel) -> dict:
     '''Given a PersonalInfoBase instance, return a dictionary with relevant information.'''
     return {
-        'height': str(base.height),
-        'weight': str(base.weight),
+        'height': base.height,
+        'weight': base.weight,
         'gender': base.gender,
         'period': base.period,
         'menopause': base.menopause,
@@ -79,16 +79,31 @@ def get_info_fn(base: BaseModel) -> dict:
         'stay_up': base.stay_up,
         'pressure': base.pressure,
     }
-
+    
 get_info = RunnableLambda(get_info_fn)
+
+# get unkown information
+def get_unknown_info(d: dict) -> str:
+    required_info = ['height', 'weight', 'gender', 'period', 'menopause', 'hand_foot',
+                    'body', 'defecation', 'digestive_system', 'meals', 'mouth', 'urine',
+                    'sleep', 'phone', 'stay_up', 'pressure']
+    unknown_info = [info for info in required_info if d[info] == 'unknown' or d[info] == 0]
+    if not unknown_info:  # 如果 unknown_info 為空列表
+        return "All information known"
+    else:
+        return "The unknown information are: " + ", ".join(unknown_info)
 
 # 個人信息的資料庫模型
 class PersonalInfoBase(BaseModel):
+    
+    # basic information
     height: float = Field(0, description = "聊天用戶的身高（公分），如果未知則為 '0'")
     weight: float = Field(0, description = "聊天用戶的體重（公斤），如果未知則為 '0'")
     gender: str = Field('unknown', description = "聊天用戶的性別，如果未知則為 'unknown'")
     period: str = Field('unknown', description = "聊天用戶的月經問題摘要，如果未知則為 'unknown'，如果用戶為男性則為 'none'")
     menopause: str = Field('unknown', description = "聊天用戶是否絕經，如果未知則為 'unknown'，如果用戶為男性則為 'none'")
+    
+    # body condition
     hand_foot: str = Field('unknown', description = "聊天用戶的手腳是否經常感到寒冷，如果正常則為 'normal'")
     body: str = Field('unknown', description = "聊天用戶的身體是否經常感到熱或出汗，如果正常則為 'normal'")
     defecation: str = Field('unknown', description = "聊天用戶的排便狀況摘要，如果整體正常則為 'normal'")
@@ -96,23 +111,28 @@ class PersonalInfoBase(BaseModel):
     meals: str = Field('unknown', description = "聊天用戶的三餐是否正常，如果正常則為 'normal'")
     mouth: str = Field('unknown', description = "聊天用戶的口腔狀況摘要，一定包含是否口苦、口乾、口臭和口渴，如果正常則為 'normal'")
     urine: str = Field('unknown', description = "聊天用戶的尿液狀況摘要，如果用戶不會口渴則為 'normal'")
+    
+    # sleeping condition
     sleep: str = Field('unknown', description = "聊天用戶的睡眠狀況摘要，一定包括睡眠時間、淺睡問題、無法入睡和早醒，如果正常則為 'normal'")
     phone: str = Field('unknown', description = "聊天用戶是否在睡前使用手機，如果睡眠正常則為 'none'")
     stay_up: str = Field('unknown', description = "聊天用戶是否經常熬夜")
     pressure: str = Field('unknown', description = "聊天用戶是否承受某些壓力及其原因，如果沒有則為 'none'")
-    open_problems: str = Field("", description = "資訊為'unknown'並需要詢問的")
+    
+    # open_problems: str = Field("", description = "The unknown information")
     current_goals: str = Field("", description = "Current goal for the agent to address")
-    summary: str = Field("", description ="目前到現在對話的摘要。用新輸入更新這個摘要")
 
 # 聊天機器人的提示模板
 main_bot_prompt = ChatPromptTemplate.from_messages([
     ("system", (
-        "你是中醫診斷的機器人L AI，功能是協助問診，根據目前檢索的資料中: {context}，針對unknown的資訊進行提問"
-        " Please chat with them! Stay concise and clear!"
-        " Your running knowledge base is: {info_base}."
-        " This is for you only; Do not mention it!"
-        " Do not ask them any other personal info."
-        " The checking happens automatically; you cannot check manually."
+        "You are L AI, a Chinese medicine diagnosis robot. You are going to assist in consultation."
+        "Based on the currently retrieved information: {context}, you can only ask questions about the unknown information in order."
+        "Ask at most one questions at a time"
+        "全部使用繁體中文"
+        "Please chat with them! Stay concise, clear and polite!"
+        "Your running knowledge base is: {info_base}."
+        "This is for you only; Do not mention it!"
+        "Do not ask them any other personal information"
+        "The checking happens automatically; you cannot check manually."
     )),
     ("assistant", "{output}"),
     ("user", "{input}"),
@@ -120,15 +140,13 @@ main_bot_prompt = ChatPromptTemplate.from_messages([
 
 # 解析器提示模板
 parser_prompt = ChatPromptTemplate.from_template(
-    "You are chatting with a user. The user just responded ('input'). Please update the knowledge base."
-    " Record your response in the 'response' tag to continue the conversation."
-    " Do not hallucinate any details, and make sure the knowledge base is not redundant."
-    " Update the entries frequently to adapt to the conversation flow."
-    "\n{format_instructions}"
+    "You are a chat assistant of Traditional Chinese Medicine, and are trying to track information about the conversation."
+    "You have just recieved a message from the user. Please fill in the schema based on the chat."
+    "\n\n{format_instructions}"
     "\n\nOLD KNOWLEDGE BASE: {info_base}"
     "\n\nASSISTANT RESPONSE: {output}"
-    "\n\nNEW MESSAGE: {input}"
-    "\n\nNEW KNOWLEDGE BASE:"
+    "\n\nUSER MESSAGE: {input}"
+    "\n\nNEW KNOWLEDGE BASE: "
 )
 
 # 加載環境變量
@@ -149,7 +167,7 @@ knowbase_getter = lambda x: PersonalInfoBase()
 knowbase_getter = RExtract(PersonalInfoBase, instruct_llm, parser_prompt)
 
 database_getter = lambda x: "Not implemented"
-database_getter = itemgetter('info_base') | get_info
+database_getter = itemgetter('info_base') | get_info | get_unknown_info
 
 # 管理狀態的內部鏈
 internal_chain = (
@@ -161,51 +179,68 @@ internal_chain = (
 state = {'info_base': PersonalInfoBase()}
 
 # 聊天生成函數
-def chat_gen(message, history = [], return_buffer = True):
+def chat_gen(message, history=[], return_buffer=True):
+
+    ## Pulling in, updating, and printing the state
     global state
     state['input'] = message
     state['history'] = history
     state['output'] = "" if not history else history[-1][1]
 
-    # 運行內部鏈來更新狀態
+    ## Generating the new state from the internal chain
     state = internal_chain.invoke(state)
-    print("鏈運行後的狀態:")
-    pprint({k: v for k, v in state.items() if k != "history"})
+    print("State after chain run:")
+    pprint({k:v for k,v in state.items() if k != "history"})
 
-    # 流結果
+    ## Streaming the results
     buffer = ""
     for token in external_chain.stream(state):
-        if isinstance(token, str):
-            contains_traditional_chinese, converted_text = is_traditional_chinese_or_digit(token)
-            if contains_traditional_chinese:
-                token_output = converted_text
-            else:
-                token_output = token
-        else:
-            token_output = token
-        
-        buffer += token_output
-        yield buffer if return_buffer else token_output
+        buffer += token
+        yield buffer if return_buffer else token
+
+def queue_fake_streaming_gradio(chat_stream, history = [], max_questions=8):
+
+    ## Mimic of the gradio initialization routine, where a set of starter messages can be printed off
+    for human_msg, agent_msg in history:
+        if human_msg: print("\n[ Human ]:", human_msg)
+        if agent_msg: print("\n[ Agent ]:", agent_msg)
+
+    ## Mimic of the gradio loop with an initial message from the agent.
+    for _ in range(max_questions):
+        message = input("\n[ Human ]: ")
+        print("\n[ Agent ]: ")
+        history_entry = [message, ""]
+        for token in chat_stream(message, history, return_buffer=False):
+            print(token, end='')
+            history_entry[1] += token
+        history += [history_entry]
+        print("\n")
 
 # 初始聊天歷史
 chat_history = [[None, "您好，我是AI中醫諮詢系統L AI，請問今天有需要諮詢嗎？"]]
 
-# Gradio 聊天函數
-def gradio_chat(input, history):
-    history.append([input, ""])
-    chat_gen_obj = chat_gen(input, history)
-    for output in chat_gen_obj:
-        history[-1][1] = output
-    return history, history
+## Simulating the queueing of a streaming gradio interface, using python input
+queue_fake_streaming_gradio(
+    chat_stream = chat_gen,
+    history = chat_history
+)
 
-# 建立 Gradio 介面
-with gr.Blocks() as demo:
-    chatbot = gr.Chatbot(value=chat_history)
-    msg = gr.Textbox(placeholder="請輸入...")
-    clear = gr.Button("清除")
+# # Gradio 聊天函數
+# def gradio_chat(input, history):
+#     history.append([input, ""])
+#     chat_gen_obj = chat_gen(input, history)
+#     for output in chat_gen_obj:
+#         history[-1][1] = output
+#     return history, history
 
-    msg.submit(gradio_chat, [msg, chatbot], [chatbot, chatbot])
-    clear.click(lambda: None, None, chatbot, queue=False).then(lambda: "", None, msg)
+# # 建立 Gradio 介面
+# with gr.Blocks() as demo:
+#     chatbot = gr.Chatbot(value=chat_history)
+#     msg = gr.Textbox(placeholder="請輸入...")
+#     clear = gr.Button("清除")
 
-# 啟動 Gradio 介面
-demo.launch()
+#     msg.submit(gradio_chat, [msg, chatbot], [chatbot, chatbot])
+#     clear.click(lambda: None, None, chatbot, queue=False).then(lambda: "", None, msg)
+
+# # 啟動 Gradio 介面
+# demo.launch()
