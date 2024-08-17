@@ -101,6 +101,6 @@ symtoms_seperate(2)
 data = {'ans_idx': ans_index,'cause': cause,'symptoms': symtoms,'persona': persona}
 
 test = pd.DataFrame(data)
-test.to_csv('testing2.csv', index=False)
+test.to_csv('testing2.health_data', index=False)
 
 
