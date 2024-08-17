@@ -48,6 +48,22 @@ def convertToBaseModel(csvData):
     DynamicModel = create_model('DynamicModel', **fields)
     return DynamicModel
 
+# convert basemodel to dictionary
+def getInfoDict(base: BaseModel) -> dict:
+    # Convert a BaseModel instance to a dictionary containing all its fields and values.
+    return base.model_dump()
+
+# get unknown information
+def getUnknownInfo(d: dict) -> str:
+    # 過濾出值為 'unknown' 或 0 的字段
+    unknown_info = [field for field, value in d.items() if value in {'unknown', 0}]
+
+    # 根據是否存在未知信息返回結果
+    return (
+        "All information known"
+        if not unknown_info
+        else "The unknown information are: " + ", ".join(unknown_info)
+    )
 
 # Example usage
 username = 'test_user'

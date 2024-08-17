@@ -15,3 +15,4 @@ sleep,str,unknown,"Summary of user's sleep condition, including sleep duration, 
 phone,str,unknown,"Does the user use a phone before bed, if sleep is normal, set to 'none'"
 stay_up,str,unknown,Does the user often stay up late
 pressure,str,unknown,"Is the user under any stress and its causes, if none, set to 'none'"
+age,int,30,User's age
