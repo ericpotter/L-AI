@@ -1,42 +1,42 @@
-import chain
 import data
 import gradio as gr
-import chat
-from functools import partial
+import chain
 
 # Initial state
 state = {'info_base': data.PersonalInfoBase}
 chat_history = [[None, "您好，我是AI中醫諮詢系統L AI，請問今天有需要諮詢嗎？"]]
 
+def chat_gen(message, history=[], return_buffer=True):
 
-# Function to generate responses using chat_gen
-def get_response(message, history):
+    # Update the state with the new input and history
     global state
+    state['input'] = message
+    state['history'] = history
+    state['output'] = "" if not history else history[-1][1]
 
-    # Call the chat_gen function to get the response
-    chat_generator = chat.chat_gen(message, history, state=state)
-    response = None
-    for resp in chat_generator:
-        response = resp
+    # Generate the new state using the internal chain
+    state = chain.internal_chain.invoke(state)
 
-    # Update the chat history
-    history.append((message, response))
+    # Filter and print the state, excluding 'history'
+    print("State after chain run:")
+    filtered_state = {k: v for k, v in state.items() if k != "history"}
+    print(filtered_state)
 
-    return history, history
-
+    # Stream the results and return either the buffer or individual tokens
+    buffer = ""
+    for token in chain.external_chain.stream(state):
+        buffer += token
+        yield buffer if return_buffer else token
 
 def main():
     with gr.Blocks() as demo:
-        chatbot = gr.Chatbot()
+        gr.Markdown("test")
+        chatbot = gr.Chatbot(
+            value=chat_history,  # Use initial chat history
+            placeholder="請輸入..."
+        )
 
-        with gr.Row():
-            text = gr.Textbox(
-                show_label=False,
-                placeholder="請輸入......",
-            ).style(container=False)
-
-        # Bind the submit action of the Textbox to the get_response function
-        text.submit(partial(get_response), [text, chatbot], [chatbot, state])
+        gr.ChatInterface(chat_gen, chatbot=chatbot)
 
     demo.launch()
 
