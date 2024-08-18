@@ -11,6 +11,9 @@ from langchain_core.runnables import RunnableLambda
 knowbase_getter = functions.RExtract(data.PersonalInfoBase, model.instruct_llm, prompt.parser_prompt)
 database_getter = RunnableLambda(itemgetter('info_base')) | data.getInfoDict | data.getUnknownInfo
 
+# checking chain status
+checking_chain = prompt.chinese_prompt | model.check_llm
+
 # external chain status
 external_chain = prompt.chat_prompt | model.chat_llm
 
@@ -19,3 +22,4 @@ internal_chain = (
     RunnableAssign({'info_base': knowbase_getter})
     | RunnableAssign({'context': database_getter})
 )
+

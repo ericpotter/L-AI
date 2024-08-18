@@ -21,7 +21,7 @@ This project is an AI-based Traditional Chinese Medicine (TCM) consultation syst
 │   └── test_user.csv            # Test user data
 └── sources/
     ├── functions.py             # Utility functions for information extraction and processing
-    └── zh_tw_convert.py         # Chinese text conversion (Simplified to Traditional)
+    └── zhtw.py         # Chinese text conversion (Simplified to Traditional)
 ```
 
 ## Installation

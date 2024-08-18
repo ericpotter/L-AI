@@ -2,7 +2,7 @@ from functools import partial
 from langchain_core.runnables import RunnableLambda
 from langchain.schema.runnable.passthrough import RunnableAssign
 from langchain.output_parsers import PydanticOutputParser
-
+import opencc
 
 # Utility function for printing status
 def RPrint(preface="Status: "):
@@ -34,3 +34,10 @@ def RExtract(pydantic_class, llm, prompt):
 
     # Return the composed runnable pipeline
     return instruct_merge | prompt | llm | preparse | parser
+
+# 初始化 OpenCC 繁體轉換器
+converter = opencc.OpenCC('s2t')
+
+def ensure_zhtw(text):
+    # 將輸入文本轉換為繁體中文
+    return converter.convert(text)
