@@ -65,21 +65,4 @@ def getUnknownInfo(d: dict) -> str:
         else "The unknown information are: " + ", ".join(unknown_info)
     )
 
-# Example usage
-username = 'test_user'
-createCSV(username)
-
-# Read the initial CSV file
-csv_file = f"{data_folder}/{username}.csv"
-df = pd.read_csv(csv_file)
-
-# Add a new data item to the DataFrame
-df = addingDataItem('age', 'int', 30, "User's age", df)
-df.to_csv(csv_file, index=False)
-
-# Convert CSV data to a Pydantic BaseModel
-DynamicModel = convertToBaseModel(csv_file)
-
-# Create an instance of the dynamically generated model
-model_instance = DynamicModel(age=25)
-print(model_instance)
+PersonalInfoBase = convertToBaseModel('health_data/test_user.csv')

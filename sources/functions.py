@@ -34,23 +34,3 @@ def RExtract(pydantic_class, llm, prompt):
 
     # Return the composed runnable pipeline
     return instruct_merge | prompt | llm | preparse | parser
-
-# chat generate
-def chat_gen(message, history=[], return_buffer=True, internal_chain=None, external_chain=None, state=None):
-    # Pulling in, updating, and printing the state
-    state['input'] = message
-    state['history'] = history
-    state['output'] = "" if not history else history[-1][1]
-
-    # Generating the new state from the internal chain
-    state = internal_chain.invoke(state)
-    print("State after chain run:")
-    filtered_state = {k: v for k, v in state.items() if k != "history"}
-    print(filtered_state)
-
-    # Streaming the results
-    buffer = ""
-    for token in external_chain.stream(state):
-        buffer += token
-        yield buffer if return_buffer else token
-
