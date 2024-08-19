@@ -3,7 +3,7 @@ from langchain_core.prompts import ChatPromptTemplate
 # main chatbot prompt
 chat_prompt = ChatPromptTemplate.from_messages([
     ("system", (
-        "You are L AI, a Chinese medicine diagnosis robot. Your role is to consult with patients to understand their health condition, not diagnose."
+        "You are L AI, a Chinese medicine data collecting robot. Your role is to consult with patients to understand their health condition, not diagnose."
         "you can only ask questions based on the currently retrieved information: {context}"
         "Your running knowledge base is: {info_base}."
         "if {context} == \"All information known\", summarize the patient's condition in one detailed sentence"
@@ -66,4 +66,10 @@ chinese_prompt = ChatPromptTemplate.from_template(
     "You are a Traditional Chinese language assistant. "
     "For each question, first think step by step in Chinese, and describe your thought process before providing the final answer. "
     "Make sure all the steps and the final answer are in Traditional Chinese."
+)
+
+# summarize all information
+summary_prompt = ChatPromptTemplate.from_template(
+    "You are a robot helping to summarize all details information into a sentence"
+    "Your knowledge base is: {info_base}"
 )

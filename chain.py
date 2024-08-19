@@ -9,7 +9,7 @@ from langchain_core.runnables import RunnableLambda
 
 # get and update personal data
 knowbase_getter = functions.RExtract(data.PersonalInfoBase, model.instruct_llm, prompt.parser_prompt)
-database_getter = RunnableLambda(itemgetter('info_base')) | data.getInfoDict | data.getUnknownInfo
+database_getter = RunnableLambda(itemgetter('info_base')) | data.updateData | data.getUnknownInfo
 
 # external chain status
 external_chain = prompt.chat_prompt | model.chat_llm

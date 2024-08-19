@@ -32,7 +32,6 @@ def addingDataItem(item, dataType, default, description, dataBase):
     dataBase = pd.concat([dataBase, new_row], ignore_index=True)
     return dataBase
 
-
 # Function to convert CSV data to a Pydantic BaseModel
 def convertToBaseModel(csvData):
     # Read CSV data into a DataFrame
@@ -48,21 +47,34 @@ def convertToBaseModel(csvData):
     DynamicModel = create_model('DynamicModel', **fields)
     return DynamicModel
 
-# convert basemodel to dictionary
-def getInfoDict(base: BaseModel) -> dict:
-    # Convert a BaseModel instance to a dictionary containing all its fields and values.
+def updateData(base: BaseModel) -> dict:
+    # csvfile = f"{data_folder}/test_user.csv"
+    #
+    # # Read the existing CSV file
+    # old_data = pd.read_csv(csvfile)
+    #
+    # # Convert the BaseModel instance to a dictionary
+    # new_data = base.model_dump()
+    #
+    # # Find the matching item and update the 'default' field
+    # for item in new_data:
+    #     if item in old_data['item'].values:
+    #         # Update the 'default' field for the matching item
+    #         old_data.loc[old_data['item'] == item, 'default'] = new_data[item]
+    #
+    # # Save the updated DataFrame back to the CSV file
+    # old_data.to_csv(csvfile, index=False)
+
     return base.model_dump()
 
 # get unknown information
 def getUnknownInfo(d: dict) -> str:
-    # 過濾出值為 'unknown' 或 0 的字段
     unknown_info = [field for field, value in d.items() if value in {'unknown', 0}]
 
-    # 根據是否存在未知信息返回結果
     return (
         "All information known"
         if not unknown_info
         else "The unknown information are: " + ", ".join(unknown_info)
     )
 
-PersonalInfoBase = convertToBaseModel('health_data/test_user.csv')
+PersonalInfoBase = convertToBaseModel(f'{data_folder}/test_user.csv')
