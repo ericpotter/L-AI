@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
 import os
 import getpass
-import prompt
+import sources.functions as functions
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.output_parsers import StrOutputParser
 
@@ -23,11 +23,9 @@ def geminiModel():
         model="gemini-1.5-flash",
         generation_config=generation_config,
         system_instruction=system_instruction
-        # Temporarily remove safety_settings for testing
     )
     return model
 
 model = geminiModel()
 instruct_llm = model | StrOutputParser()
-chat_llm = model | StrOutputParser()
-check_llm = model | StrOutputParser()
+chat_llm = model | StrOutputParser() | functions.ensure_zhtw
