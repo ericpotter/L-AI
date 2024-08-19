@@ -2,7 +2,6 @@ item,dataType,default,description
 height,float,0,User's height (cm)
 weight,float,0,User's weight (kg)
 gender,str,unknown,User's gender
-age,int,unknown,User's age
 period,str,unknown,"Summary of user's menstrual issues, if male, set to 'none'"
 menopause,str,unknown,"Has the user undergone menopause, if male, set to 'none', if user has period, set to 'none'"
 hand_foot,str,unknown,"Do the user's hands and feet often feel cold, if normal, set to 'normal'"
