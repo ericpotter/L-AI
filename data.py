@@ -19,18 +19,23 @@ def createCSV(username):
 
 
 # Function to add a new data item to the DataFrame
-def addingDataItem(item, dataType, default, description, dataBase):
-    # Create a new row with the provided data
-    new_row = pd.DataFrame({
-        'item': [item],
-        'dataType': [dataType],
-        'default': [default],
-        'description': [description]
-    })
+def addingDataItem(base_model: BaseModel, item: str, data_type: str, default, description: str) -> BaseModel:
+    # 取得現有 BaseModel 的欄位和類型標註
+    fields = {
+        field_name: (field_info, base_model.model_fields[field_name])
+        for field_name, field_info in base_model.__annotations__.items()
+    }
 
-    # Use pd.concat to add the new row to the DataFrame
-    dataBase = pd.concat([dataBase, new_row], ignore_index=True)
-    return dataBase
+    # 新增一個新的欄位
+    new_field = (eval(data_type), Field(default=default, description=description))
+
+    # 將新欄位加入到欄位字典中
+    fields[item] = new_field
+
+    # 使用更新後的欄位來創建一個新的 BaseModel
+    UpdatedModel = create_model('UpdatedModel', **fields)
+
+    return UpdatedModel
 
 # Function to convert CSV data to a Pydantic BaseModel
 def convertToBaseModel(csvData):
@@ -78,3 +83,4 @@ def getUnknownInfo(d: dict) -> str:
     )
 
 PersonalInfoBase = convertToBaseModel(f'{data_folder}/test_user.csv')
+PersonalInfoBase = addingDataItem(PersonalInfoBase, "summary", "str", "unknown", "Running detail summary of conversation. Update this with new input")

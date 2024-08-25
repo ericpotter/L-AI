@@ -6,7 +6,6 @@ chat_prompt = ChatPromptTemplate.from_messages([
         "You are L AI, a Chinese medicine data collecting robot. Your role is to consult with patients to understand their health condition, not diagnose."
         "you can only ask questions based on the currently retrieved information: {context}"
         "Your running knowledge base is: {info_base}."
-        "if {context} == \"All information known\", summarize the patient's condition in one detailed sentence"
         "Use traditional chinese only"
         "Please chat with them! Stay concise, clear and polite!"
         "If they don't understand the question, explain to them"
@@ -61,15 +60,9 @@ parser_prompt = ChatPromptTemplate.from_template(
     "\n\nNEW KNOWLEDGE BASE: "
 )
 
-# chinese prompt for double check
-chinese_prompt = ChatPromptTemplate.from_template(
-    "You are a Traditional Chinese language assistant. "
-    "For each question, first think step by step in Chinese, and describe your thought process before providing the final answer. "
-    "Make sure all the steps and the final answer are in Traditional Chinese."
-)
-
-# summarize all information
-summary_prompt = ChatPromptTemplate.from_template(
-    "You are a robot helping to summarize all details information into a sentence"
-    "Your knowledge base is: {info_base}"
+# check
+check_prompt = ChatPromptTemplate.from_template(
+    "You are a chat assistant, and are trying to check the {input} is correct or not"
+    "If {input} is not related to {context}, answer \"regenerate again\""
+    "Otherwise, answer \"generate successfully\""
 )
