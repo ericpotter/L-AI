@@ -35,27 +35,6 @@ def chat_gen(message, history=[]):
         buffer += token
     yield buffer
 
-    # print(buffer)
-    #
-    # buffer = "請告訴我您的身高體重"
-    #
-    # # 構建一個字典來匹配 check_chain 的期望輸入格式
-    # input_data = {
-    #     "input": buffer,
-    #     # 你可以在這裡根據需要添加更多的鍵
-    #     "history": state.get("history", []),
-    #     "context": state.get("context", [])
-    # }
-    # print(input_data)
-    #
-    # # 迭代 check_chain.stream() 生成器，處理 input_data 字典
-    # final_output = ""
-    # for token in chain.check_chain.stream(input_data):
-    #     final_output += token
-    #
-    # # 返回最終結果
-    # yield final_output
-
 def main():
     with gr.Blocks() as demo:
         gr.Markdown("L AI")
