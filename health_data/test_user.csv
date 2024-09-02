@@ -2,10 +2,9 @@ item,dataType,default,description
 height,float,0,User's height (cm)
 weight,float,0,User's weight (kg)
 gender,str,unknown,User's gender
+age,int,unknown,User's age
 period,str,unknown,"Summary of user's menstrual issues, if male, set to 'none'"
 menopause,str,unknown,"Has the user undergone menopause, if male, set to 'none', if user has period, set to 'none'"
-hand_foot,str,unknown,"Do the user's hands and feet often feel cold, if normal, set to 'normal'"
-body,str,unknown,"Does the user often feel hot or sweat, if normal, set to 'normal'"
 digestive_system,str,unknown,"Summary of user's digestive system, if defecation is normal, set to 'none'"
 defecation,str,unknown,"Summary of user's defecation status, if overall normal, set to 'normal'"
 meals,str,unknown,"Are the user's meals regular, if normal, set to 'normal'"

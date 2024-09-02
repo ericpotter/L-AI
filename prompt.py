@@ -6,20 +6,35 @@ chat_prompt = ChatPromptTemplate.from_messages([
         "You are L AI, a Chinese medicine data collecting robot. Your role is to consult with patients to understand their health condition, not diagnose."
         "Your running knowledge base is: {info_base}."
         "Use traditional chinese only"
+        "You don't have the ability to answer any questions not related to your consultation"
         "Please chat with them! Stay concise, clear and polite!"
         "If they don't understand the question, explain to them"
         "This is for you only; Do not mention it!"
         "Do not ask them any other personal information"
         "The checking happens automatically; you cannot check manually."
     )),
+    ("assistant", "{output}"),
+    ("user", "{input}"),
+])
+
+# check whether user wants to consult
+intent_prompt = ChatPromptTemplate.from_messages([
+    ("system", (
+        "Determine if the user wants further health consultation based on the input."
+        "Only answer \"yes\" or \"no\"."
+    )),
+    ("user", "{input}"),
 ])
 
 # self description
 self_description_prompt = ChatPromptTemplate.from_messages([
     ("system", (
         "Now ask the patient to describe their health condition in their own words."
+        "Only can consult their sleeping problem, if they describe others, tell them currently we don't have that function"
+        "Output summary of user's problems"
     )),
-    ("user", "請您描述一下您的身體狀況，或有任何特別不適的地方。"),
+    ("assistant", "請您描述一下您的身體狀況，或有任何特別不適的地方。"),
+    ("assistant", "非常抱歉，目前只針對睡眠問題做諮詢，請問您有睡眠上的問題嗎？"),
 ])
 
 # basic body information
@@ -27,8 +42,8 @@ basic_info_prompt = ChatPromptTemplate.from_messages([
     ("system", (
         "Now ask the patient's basic information only including name, gender, height, weight, and age."
     )),
-    ("user", "我接下來會詢問您個人健康狀況來了解您的狀況，再麻煩詳細告知，先從基本的開始，請告訴我您的名字與性別"),
-    ("user", "請問您的身高體重，請分別用公分與公斤表示"),
+    ("assistant", "我接下來會詢問您個人健康狀況來了解您的狀況，再麻煩詳細告知，先從基本的開始，請告訴我您的名字與性別"),
+    ("assistant", "請問您的身高體重，請分別用公分與公斤表示"),
 ])
 
 # sleeping condition
@@ -48,12 +63,13 @@ mouth_prompt = ChatPromptTemplate.from_messages([
     ("user", "告訴我您口腔的情況，是否會口苦、口乾、口臭或是容易口渴？嘴吧是否容易破皮？"),
 ])
 
-# bowel condition
-bowel_habit_prompt = ChatPromptTemplate.from_messages([
+# appetite and defecation condition
+appetite_defecation_prompt = ChatPromptTemplate.from_messages([
     ("system", (
-        "Now ask about the patient's bowel habits."
+        "Now ask about the patient's appetite and defecation condition."
     )),
     ("user", "您的排便情況如何？是否有便秘或腹瀉的情況？"),
+    ("user", "您最近食慾還正常嗎？是否有正常吃三餐"),
 ])
 
 # period condition
@@ -89,11 +105,4 @@ parser_prompt = ChatPromptTemplate.from_template(
     "\n\nASSISTANT RESPONSE: {output}"
     "\n\nUSER MESSAGE: {input}"
     "\n\nNEW KNOWLEDGE BASE: "
-)
-
-# check
-check_prompt = ChatPromptTemplate.from_template(
-    "You are a chat assistant, and are trying to check the {input} is correct or not"
-    "If {input} is not related to {context}, answer \"regenerate again\""
-    "Otherwise, answer \"generate successfully\""
 )
