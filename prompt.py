@@ -1,5 +1,4 @@
-from langchain_core.prompts import ChatPromptTemplate
-from langchain.chains.router import MultiPromptChain
+from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
 from langchain.chains.router.llm_router import RouterOutputParser
 
 # main chatbot prompt
@@ -20,14 +19,45 @@ chat_prompt = ChatPromptTemplate.from_messages([
     ("user", "{input}"),
 ])
 
-# check whether user wants to consult
-intent_prompt = ChatPromptTemplate.from_messages([
-    ("system", (
-        "Determine if the user wants further health consultation based on the input."
-        "Only answer \"yes\" or \"no\"."
-    )),
-    ("user", "{input}"),
-])
+router_template_prompt ="""Given a raw text input to a language model select the model prompt best suited for the input. \
+    You will be given the names of the available prompts and a \
+    description of what the prompt is best suited for. \
+    You may also revise the original input if you think that revising\
+    it will ultimately lead to a better response from the language model.
+    
+    << FORMATTING >>
+    Return a markdown code snippet with a JSON object formatted to look like:
+    
+    \```json
+    {{{{
+        "destination": string \ name of the prompt to use or "DEFAULT"
+        "next_inputs": string \ a potentially modified version of the original input
+    }}}}
+    \```
+    
+    REMEMBER: "destination" MUST be one of the candidate prompt \
+    names specified below OR it can be "DEFAULT" if the input is not\
+    well suited for any of the candidate prompts.
+    REMEMBER: "next_inputs" can just be the original input \
+    if you don't think any modifications are needed.
+    
+    << CANDIDATE PROMPTS >>
+    {destinations}
+    
+    << INPUT >>
+    {{input}}
+    
+    << OUTPUT (remember to include the ```json)>>"""
+
+router_template = router_template_prompt.format(
+    destinations=destinations_str
+)
+
+router_prompt = PromptTemplate(
+    template=router_template_prompt,
+    input_variables=["input"],
+    output_parser=RouterOutputParser(),
+)
 
 # self description
 self_description_prompt = ChatPromptTemplate.from_messages([
@@ -99,16 +129,33 @@ mind_prompt = ChatPromptTemplate.from_messages([
     ("user", "您是否經常感覺壓力很大？您覺得是什麼樣的事情造成您的壓力"),
 ])
 
-questions_prompts = {
-    "self_description": self_description_prompt,
-    "basic_info": basic_info_prompt,
-    "sleeping": sleeping_prompt,
-    "mouth_condition": mouth_prompt,
-    "appetite_defecation": appetite_defecation_prompt,
-    "period_condition": period_prompt,
-    "menopause": menopause_prompt,
-    "mind_condition": mind_prompt,
-}
+prompt_infos = [
+    {
+        "name": "self_description",
+        "description": "Good for users to describe their health condition in their own words.",
+        "prompt_template": self_description_prompt,
+    },
+    {
+        "name": "basic_info",
+        "description": "Good for collecting users' basic information including name, gender, height, weight, and age.",
+        "prompt_template": basic_info_prompt,
+    },
+    {
+        "name": "sleeping",
+        "description": "Good for collecting users' sleep quality.",
+        "prompt_template": sleeping_prompt,
+    },
+    {
+        "name": "mouth",
+        "description": "Good for collecting users' mouth condition.",
+        "prompt_template": mouth_prompt,
+    },
+    {
+        "name": "appetite defecation",
+        "description": "Good for collecting users' appetite and defecation condition.",
+        "prompt_template": appetite_defecation_prompt,
+    },
+]
 
 # parser prompt
 parser_prompt = ChatPromptTemplate.from_template(
