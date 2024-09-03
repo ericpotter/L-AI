@@ -15,8 +15,6 @@ database_getter = RunnableLambda(itemgetter('info_base')) | data.updateData | da
 # external chain status
 external_chain = prompt.chat_prompt | model.chat_llm
 
-check_chain = prompt.check_prompt | model.check_llm
-
 # internal chain status
 internal_chain = (
     RunnableAssign({'info_base': knowbase_getter})

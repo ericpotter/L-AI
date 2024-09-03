@@ -42,7 +42,6 @@ def main():
             value=chat_history,  # Use initial chat history
             placeholder="請輸入..."
         )
-
         gr.ChatInterface(chat_gen, chatbot=chatbot)
 
     demo.launch()

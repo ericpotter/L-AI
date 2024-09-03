@@ -74,13 +74,10 @@ def updateData(base: BaseModel) -> dict:
 
 # get unknown information
 def getUnknownInfo(d: dict) -> str:
-    unknown_info = [field for field, value in d.items() if value in {'unknown', 0}]
+    for field, value in d.items():
+        if value in {'unknown', 0}:
+            return f"{field}"
 
-    return (
-        "All information known"
-        if not unknown_info
-        else "The unknown information are: " + ", ".join(unknown_info)
-    )
+    return "All information known"
 
 PersonalInfoBase = convertToBaseModel(f'{data_folder}/test_user.csv')
-PersonalInfoBase = addingDataItem(PersonalInfoBase, "summary", "str", "unknown", "Running detail summary of conversation. Update this with new input")
