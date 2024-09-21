@@ -3,8 +3,11 @@ height,float,175,User's height (cm)
 weight,float,65,User's weight (kg)
 gender,str,male,User's gender
 period,str,none,"Summary of user's menstrual issues, if male, set to 'none'"
-menopause,str,none,"Has the user undergone menopause, if male, set to 'none', if age is under 50, set to 'none'"
+menopause,str,none,"Has the user undergone menopause, if male, set to 'none'"
+hand_foot,str,normal,"Do the user's hands and feet often feel cold, if normal, set to 'normal'"
+body,str,normal,"Does the user often feel hot or sweat, if normal, set to 'normal'"
 defecation,str,normal,"Summary of user's defecation status, if overall normal, set to 'normal'"
+digestive_system,str,normal,"Summary of user's digestive system, if defecation is normal, set to 'none'"
 meals,str,normal,"Are the user's meals regular, if normal, set to 'normal'"
 mouth,str,normal,"Summary of user's oral condition, including bitterness, dryness, bad breath, and thirst, if normal, set to 'normal'"
 urine,str,normal,"Summary of user's urine condition, if not thirsty, set to 'normal'"
@@ -12,4 +15,3 @@ sleep,str,normal,"Summary of user's sleep condition, including sleep duration, s
 phone,str,normal,"Does the user use a phone before bed, if sleep is normal, set to 'none'"
 stay_up,str,normal,Does the user often stay up late
 pressure,str,normal,"Is the user under any stress and its causes, if none, set to 'none'"
-summary,str,unknown,"Running summary of conversation. Update this with new input"

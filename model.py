@@ -29,4 +29,3 @@ def geminiModel():
 model = geminiModel()
 instruct_llm = model | StrOutputParser()
 chat_llm = model | StrOutputParser() | functions.ensure_zhtw
-check_llm = model | StrOutputParser()

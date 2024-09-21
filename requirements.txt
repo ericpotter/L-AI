@@ -6,4 +6,3 @@ langchain>=0.2.14
 OpenCC>=1.1.9
 gradio>=4.41.0
 Flask>=3.0.3
-owlready2>=0.46
