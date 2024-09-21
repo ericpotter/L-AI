@@ -1,5 +1,6 @@
 from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
 from langchain.chains.router.llm_router import RouterOutputParser
+import chain
 
 # main chatbot prompt
 chat_prompt = ChatPromptTemplate.from_messages([
@@ -19,7 +20,7 @@ chat_prompt = ChatPromptTemplate.from_messages([
     ("user", "{input}"),
 ])
 
-router_template_prompt ="""Given a raw text input to a language model select the model prompt best suited for the input. \
+MULTI_PROMPT_ROUTER_TEMPLATE ="""Given a raw text input to a language model select the model prompt best suited for the input. \
     You will be given the names of the available prompts and a \
     description of what the prompt is best suited for. \
     You may also revise the original input if you think that revising\
@@ -49,12 +50,12 @@ router_template_prompt ="""Given a raw text input to a language model select the
     
     << OUTPUT (remember to include the ```json)>>"""
 
-router_template = router_template_prompt.format(
-    destinations=destinations_str
+router_template = MULTI_PROMPT_ROUTER_TEMPLATE.format(
+    destinations=chain.destinations
 )
 
 router_prompt = PromptTemplate(
-    template=router_template_prompt,
+    template=router_template,
     input_variables=["input"],
     output_parser=RouterOutputParser(),
 )
